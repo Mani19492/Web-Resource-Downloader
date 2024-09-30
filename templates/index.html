@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Resources</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Download and View Resources</h1>
+        <form id="download-form" action="/download" method="POST">
+            <input type="text" name="url" placeholder="Enter website URL" required>
+            <button type="submit">Download</button>
+        </form>
+        <p id="response-message"></p>
+
+        <!-- Terminal-like display for showing the code and media -->
+        <div id="terminal" class="code-display" style="display: none;">
+            <div class="code-block">
+                <h2>HTML Code</h2>
+                <pre id="html-code"></pre>
+            </div>
+            <div class="code-block">
+                <h2>CSS Code</h2>
+                <pre id="css-code"></pre>
+            </div>
+            <div class="code-block">
+                <h2>JavaScript Code</h2>
+                <pre id="js-code"></pre>
+            </div>
+        </div>
+
+        <!-- Display images -->
+        <div id="media-section" style="display: none;">
+            <h2>Images</h2>
+            <div id="images-container"></div>
+            <h2>Videos</h2>
+            <div id="videos-container"></div>
+        </div>
+    </div>
+
+    <script>
+        // JavaScript to handle form submission and display the code
+        document.getElementById('download-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            var formData = new FormData(this);
+
+            fetch('/download', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const messageElem = document.getElementById('response-message');
+                if (data.message) {
+                    messageElem.textContent = data.message;
+                    messageElem.style.color = 'green';
+
+                    // Show the terminal with the downloaded code
+                    document.getElementById('terminal').style.display = 'flex';
+                    document.getElementById('html-code').textContent = data.contents.HTML || 'No HTML content found';
+                    document.getElementById('css-code').textContent = data.contents.CSS || 'No CSS content found';
+                    document.getElementById('js-code').textContent = data.contents.JavaScript || 'No JavaScript content found';
+
+                    // Display images and videos
+                    document.getElementById('media-section').style.display = 'block';
+                    let imagesContainer = document.getElementById('images-container');
+                    let videosContainer = document.getElementById('videos-container');
+                    
+                    // Clear previous images and videos
+                    imagesContainer.innerHTML = '';
+                    videosContainer.innerHTML = '';
+
+                    data.contents.Images.forEach(image => {
+                        let imgElem = document.createElement('img');
+                        imgElem.src = image;
+                        imgElem.style.width = '100px';
+                        imgElem.style.margin = '10px';
+                        imagesContainer.appendChild(imgElem);
+                    });
+
+                    data.contents.Videos.forEach(video => {
+                        let videoElem = document.createElement('video');
+                        videoElem.src = video;
+                        videoElem.controls = true;
+                        videoElem.style.width = '200px';
+                        videoElem.style.margin = '10px';
+                        videosContainer.appendChild(videoElem);
+                    });
+
+                } else {
+                    messageElem.textContent = data.error;
+                    messageElem.style.color = 'red';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
