@@ -3,20 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Download Resources</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Download and View Resources</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1>Download and View Resources</h1>
-        <form id="download-form" action="/download" method="POST">
-            <input type="text" name="url" placeholder="Enter website URL" required>
-            <button type="submit">Download</button>
-        </form>
+        <h1>Download Web Resources</h1>
+        <input type="text" id="url-input" placeholder="Enter website URL (e.g., https://example.com)">
+        <button onclick="downloadResources()">Download</button>
         <p id="response-message"></p>
 
-        <!-- Terminal-like display for showing the code and media -->
-        <div id="terminal" class="code-display" style="display: none;">
+        <div class="code-display hidden">
             <div class="code-block">
                 <h2>HTML Code</h2>
                 <pre id="html-code"></pre>
@@ -31,8 +29,7 @@
             </div>
         </div>
 
-        <!-- Display images -->
-        <div id="media-section" style="display: none;">
+        <div id="media-section" class="hidden">
             <h2>Images</h2>
             <div id="images-container"></div>
             <h2>Videos</h2>
@@ -41,60 +38,53 @@
     </div>
 
     <script>
-        // JavaScript to handle form submission and display the code
-        document.getElementById('download-form').addEventListener('submit', function(event) {
-            event.preventDefault();
-            var formData = new FormData(this);
-
-            fetch('/download', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                const messageElem = document.getElementById('response-message');
-                if (data.message) {
-                    messageElem.textContent = data.message;
-                    messageElem.style.color = 'green';
-
-                    // Show the terminal with the downloaded code
-                    document.getElementById('terminal').style.display = 'flex';
-                    document.getElementById('html-code').textContent = data.contents.HTML || 'No HTML content found';
-                    document.getElementById('css-code').textContent = data.contents.CSS || 'No CSS content found';
-                    document.getElementById('js-code').textContent = data.contents.JavaScript || 'No JavaScript content found';
-
-                    // Display images and videos
-                    document.getElementById('media-section').style.display = 'block';
-                    let imagesContainer = document.getElementById('images-container');
-                    let videosContainer = document.getElementById('videos-container');
+        function downloadResources() {
+            const url = $('#url-input').val();
+            $('#response-message').text('Downloading...').css('color', '#e0e0e0');
+            
+            $.ajax({
+                url: '/download',
+                type: 'POST',
+                data: { url: url },
+                success: function(response) {
+                    $('#response-message').text(response.message).css('color', '#4caf50');
                     
-                    // Clear previous images and videos
-                    imagesContainer.innerHTML = '';
-                    videosContainer.innerHTML = '';
+                    // Show the code and media sections
+                    $('.code-display').removeClass('hidden');
+                    $('#media-section').removeClass('hidden');
 
-                    data.contents.Images.forEach(image => {
-                        let imgElem = document.createElement('img');
-                        imgElem.src = image;
-                        imgElem.style.width = '100px';
-                        imgElem.style.margin = '10px';
-                        imagesContainer.appendChild(imgElem);
+                    // Populate code sections
+                    $('#html-code').text(response.contents.HTML || 'No HTML content');
+                    $('#css-code').text(response.contents.CSS || 'No CSS content');
+                    $('#js-code').text(response.contents.JavaScript || 'No JavaScript content');
+
+                    // Clear previous media
+                    $('#images-container').empty();
+                    $('#videos-container').empty();
+
+                    // Display images
+                    response.contents.Images.forEach(img => {
+                        $('#images-container').append(`<img src="${img}" alt="Downloaded Image">`);
                     });
 
-                    data.contents.Videos.forEach(video => {
-                        let videoElem = document.createElement('video');
-                        videoElem.src = video;
-                        videoElem.controls = true;
-                        videoElem.style.width = '200px';
-                        videoElem.style.margin = '10px';
-                        videosContainer.appendChild(videoElem);
+                    // Display videos
+                    response.contents.Videos.forEach(video => {
+                        $('#videos-container').append(`
+                            <video controls style="max-width: 200px;">
+                                <source src="${video}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+                        `);
                     });
-
-                } else {
-                    messageElem.textContent = data.error;
-                    messageElem.style.color = 'red';
+                },
+                error: function(xhr) {
+                    $('#response-message').text(xhr.responseJSON.error || 'An error occurred').css('color', '#f44336');
+                    // Ensure sections remain hidden on error
+                    $('.code-display').addClass('hidden');
+                    $('#media-section').addClass('hidden');
                 }
             });
-        });
+        }
     </script>
 </body>
 </html>
